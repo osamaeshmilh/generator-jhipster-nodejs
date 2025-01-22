@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { <%_ if (databaseType === 'mongodb') { _%> ObjectIdColumn <%_ } else { _%> PrimaryGeneratedColumn <%_ } _%>, Entity, Column <%_ if (databaseType !== 'mongodb') { _%>, JoinColumn, OneToOne, ManyToOne, OneToMany, ManyToMany, JoinTable <%_ } _%> } from 'typeorm';
 import { BaseEntity } from './base/base.entity';
+import { ObjectId } from 'mongodb';
 
 <%_
 let isUserRelationship = false;
@@ -93,51 +94,35 @@ export class <%= persistClass %> extends BaseEntity  {
     <%_ }
     } _%>
 
-    <%_
-    for (idx in relationships) {
-        const relationship = relationships[idx];
-        const otherEntityRelationshipName = relationships[idx].otherEntityRelationshipName;
-        const otherEntityRelationshipNamePlural = relationships[idx].otherEntityRelationshipNamePlural;
-        const relationshipName = relationships[idx].relationshipName;
-        const relationshipFieldName = relationships[idx].relationshipFieldName;
-        const relationshipFieldNamePlural = relationships[idx].relationshipFieldNamePlural;
-        const relationshipType = relationships[idx].relationshipType;
-        const relationshipValidate = relationships[idx].relationshipValidate;
-        const relationshipRequired = relationships[idx].relationshipRequired;
-        const otherEntityNameCapitalized = relationships[idx].otherEntityNameCapitalized;
-        const ownerSide = relationships[idx].ownerSide; // before was ownerSide === true in and userRel many-to-one
-        const otherEntityClass = relationships[idx].otherEntity.persistClass;
-        let userRelationship = false;
-        if (otherEntityClass === 'User'){
-            userRelationship = true;
-        }
+<%_
+        for (idx in relationships) {
+    const relationship = relationships[idx];
+    const otherEntityClass = relationships[idx].otherEntity.persistClass;
+    const relationshipName = relationships[idx].relationshipName;
+    const relationshipFieldName = relationships[idx].relationshipFieldName;
+    const relationshipFieldNamePlural = relationships[idx].relationshipFieldNamePlural;
+    const relationshipType = relationships[idx].relationshipType;
 
-        if (relationshipType === 'one-to-many') {_%>
-    @OneToMany(type => <%= otherEntityClass %> <%_ if (userRelationship === false) { _%>, other => other.<%= otherEntityRelationshipName %><%_ } _%>)
-    <%= relationshipFieldNamePlural %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= otherEntityClass %>[];
+if (relationshipType === 'one-to-many') { _%>
 
-    <%_ } else if (relationshipType === 'many-to-one') { _%>
-    @ManyToOne(type => <%= otherEntityClass %> <%_ if (!ownerSide && userRelationship === false ) { _%>, other => other.<%= otherEntityRelationshipNamePlural %>  <%_ } _%>)
-    <%= relationshipFieldName %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= otherEntityClass %>;
 
-    <%_ } else if (relationshipType === 'many-to-many') { _%>
-    @ManyToMany(type => <%= otherEntityClass %> )
-        <%_ if (ownerSide === true) { _%>
-    @JoinTable({
-        name: '<%= relationship.joinTable.name %>',
-        joinColumn: { name: '<%= entityTableName %>_id', referencedColumnName: "id" },
-        inverseJoinColumn: { name: '<%= relationship.columnName %>_id', referencedColumnName: "id" }
-    })
-        <%_ } _%>
-    <%= relationshipFieldNamePlural %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= otherEntityClass %>[];
+    // Virtual field for populated relationship
+    <%= relationshipFieldNamePlural %>?: <%= otherEntityClass %>[];
 
-    <%_ } else { _%>
-    @OneToOne(type => <%= otherEntityClass %>)
-    <%_ if (ownerSide === true) { _%>@JoinColumn()<%_ } _%>
-    <%= relationshipFieldName %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= otherEntityClass %>;
+<%_ } else if (relationshipType === 'many-to-one' || relationshipType === 'one-to-one') { _%>
 
-    <%_ }
-    } _%>
+
+    // Virtual field for populated relationship
+    <%= relationshipFieldName %>?: <%= otherEntityClass %>;
+
+<%_ } else if (relationshipType === 'many-to-many') { _%>
+
+
+    // Virtual field for populated relationship
+    <%= relationshipFieldNamePlural %>?: <%= otherEntityClass %>[];
+
+<%_ }
+} _%>
     // jhipster-needle-entity-add-field - JHipster will add fields here, do not remove
 
 }

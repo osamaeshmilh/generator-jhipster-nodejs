@@ -7,104 +7,141 @@ import { CreateTables1570200270081 } from './migrations/1570200270081-CreateTabl
 // jhipster-needle-add-entity-to-ormconfig-imports - JHipster will add code here, do not remove
 
 <%_ if (databaseType === 'mongodb') { _%>
-async function ormConfig(): Promise<TypeOrmModuleOptions> {
-let mongod;
-if (process.env.BACKEND_ENV !== 'prod') {
+    async function ormConfig(): Promise<TypeOrmModuleOptions> {
+    let mongod;
+    if (process.env.BACKEND_ENV !== 'prod') {
     mongod = await MongoMemoryServer.create();
-}
-<%_ } else { _%>
-function ormConfig(): TypeOrmModuleOptions {
-<%_ } _%>
-  let ormconfig: TypeOrmModuleOptions;
+    }
 
-  if (process.env.BACKEND_ENV === 'prod') {
-    ormconfig = {
-      name: 'default',
-      type: '<%= nodeProdDatabaseType %>',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('<%= nodeProdDatabaseDriver %>'),
-      database: '<%= (databaseType === 'sql') ? prodDatabaseName : baseName %>',
-      host: '<%= (databaseType === 'sql') ? prodDatabaseType : databaseType %>',
-      // port: <%= dbPortValue %>,
-      username: '<%- (databaseType === 'sql') ? prodDatabaseUsername : '' %>',
-      password: '<%- (databaseType === 'sql') ? prodDatabasePassword : '' %>',
-      logging: false,
-      // synchronize: false,
-    };
-  } else if (process.env.BACKEND_ENV === 'test') {
-    ormconfig = {
-      name: 'default',
-<%_ if (databaseTypeSql) { _%>
-      type: 'sqlite',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('sqlite3'),
-      database: ':memory:',
-<%_ } else { _%>
-      type: '<%= nodeProdDatabaseType %>',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('<%= nodeProdDatabaseDriver %>'),
-      host: '127.0.0.1',
-      port: mongod.instanceInfo.port,
-      database: mongod.instanceInfo.dbName,
-<%_ } _%>
-      keepConnectionAlive: true,
-      logging: true,
-    };
-<%_ if (devDatabaseType !== 'sqlite') { _%>
-
-  } else if (process.env.BACKEND_ENV === 'dev') {
-    ormconfig = {
-      name: 'default',
-      type: '<%= nodeDevDatabaseType %>',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('<%= nodeDevDatabaseDriver %>'),
-      database: '<%= (databaseType === 'sql') ? devDatabaseName : baseName %>',
-      host: '127.0.0.1',
-      // port: <%= dbPortValue %>,
-      username: '<%- (databaseType === 'sql') ? devDatabaseUsername : '' %>',
-      password: '<%- (databaseType === 'sql') ? devDatabasePassword : '' %>',
-      logging: false,
-    };
-<%_ } _%>
-  } else {
-    ormconfig = {
-      name: 'default',
-<%_ if (databaseType === 'mongodb') { _%>
-      type: '<%= nodeDevDatabaseType %>',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('<%= nodeDevDatabaseDriver %>'),
-      host: '127.0.0.1',
-      port: mongod?.instanceInfo?.port ?? 0,
-      database: mongod?.instanceInfo?.dbName ?? 'dev',
-<%_ } else { _%>
-      type: 'sqlite',
-      // typeorm fails to auto load driver due to workspaces resolution
-      driver: require('sqlite3'),
-      database: __dirname + '../../target/db/sqlite-dev-db.sql',
-<%_ } _%>
-      logging: true,
-    };  
-  }
-
-  return {
+    const baseConfig: TypeOrmModuleOptions = {
+    name: 'default',
+    type: 'mongodb',
     synchronize: process.env.BACKEND_ENV === 'test',
     migrationsRun: true,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
     entities: [
-      // jhipster-needle-add-entity-to-ormconfig-entities - JHipster will add code here, do not remove
+    // jhipster-needle-add-entity-to-ormconfig-entities - JHipster will add code here, do not remove
     ],
     migrations: [
-      CreateTables1570200270081,
-      SeedUsersRoles1570200490072,
-      // jhipster-needle-add-migration-to-ormconfig-migrations - JHipster will add code here, do not remove
+    CreateTables1570200270081,
+    SeedUsersRoles1570200490072,
+    // jhipster-needle-add-migration-to-ormconfig-migrations - JHipster will add code here, do not remove
     ],
     autoLoadEntities: true,
-<%_ if (prodDatabaseTypeMssql) { _%>
-    extra: {
-      trustServerCertificate: true,
-    },
-<%_ } _%>
-    ...ormconfig,
-  };
-}
+    };
 
-export { ormConfig };
+    switch (process.env.BACKEND_ENV) {
+    case 'prod':
+    return {
+    ...baseConfig,
+    url: process.env.MONGODB_URL || 'mongodb://<%= databaseType %>:27017/<%= baseName %>',
+    logging: false,
+    };
+
+    case 'test':
+    return {
+    ...baseConfig,
+    url: `mongodb://127.0.0.1:${mongod.instanceInfo.port}/${mongod.instanceInfo.dbName}`,
+    keepConnectionAlive: true,
+    logging: true,
+    };
+
+    case 'dev':
+    return {
+    ...baseConfig,
+    url: 'mongodb://127.0.0.1:27017/<%= baseName %>',
+    logging: false,
+    };
+
+    default:
+    return {
+    ...baseConfig,
+    url: mongod ?
+    `mongodb://127.0.0.1:${mongod.instanceInfo.port}/${mongod.instanceInfo.dbName}` :
+    'mongodb://127.0.0.1:27017/dev',
+    logging: true,
+    };
+    }
+    <%_ } else { _%>
+        function ormConfig(): TypeOrmModuleOptions {
+        let ormconfig: TypeOrmModuleOptions;
+
+        if (process.env.BACKEND_ENV === 'prod') {
+        ormconfig = {
+        name: 'default',
+        type: '<%= nodeProdDatabaseType %>',
+        database: '<%= (databaseType === 'sql') ? prodDatabaseName : baseName %>',
+        host: '<%= (databaseType === 'sql') ? prodDatabaseType : databaseType %>',
+        username: '<%- (databaseType === 'sql') ? prodDatabaseUsername : '' %>',
+        password: '<%- (databaseType === 'sql') ? prodDatabasePassword : '' %>',
+        logging: false,
+        };
+        } else if (process.env.BACKEND_ENV === 'test') {
+        ormconfig = {
+        name: 'default',
+        <%_ if (databaseTypeSql) { _%>
+        type: 'sqlite',
+        driver: require('sqlite3'),
+        database: ':memory:',
+        <%_ } else { _%>
+            type: '<%= nodeProdDatabaseType %>',
+            host: '127.0.0.1',
+            port: 27017,
+            database: 'test',
+        <%_ } _%>
+        keepConnectionAlive: true,
+        logging: true,
+        };
+        <%_ if (devDatabaseType !== 'sqlite') { _%>
+            } else if (process.env.BACKEND_ENV === 'dev') {
+            ormconfig = {
+            name: 'default',
+            type: '<%= nodeDevDatabaseType %>',
+            database: '<%= (databaseType === 'sql') ? devDatabaseName : baseName %>',
+            host: '127.0.0.1',
+            username: '<%- (databaseType === 'sql') ? devDatabaseUsername : '' %>',
+            password: '<%- (databaseType === 'sql') ? devDatabasePassword : '' %>',
+            logging: false,
+            };
+        <%_ } _%>
+        } else {
+        ormconfig = {
+        name: 'default',
+        <%_ if (databaseType === 'mongodb') { _%>
+            type: '<%= nodeDevDatabaseType %>',
+            host: '127.0.0.1',
+            port: 27017,
+            database: 'dev',
+        <%_ } else { _%>
+        type: 'sqlite',
+        driver: require('sqlite3'),
+        database: __dirname + '../../target/db/sqlite-dev-db.sql',
+        <%_ } _%>
+        logging: true,
+        };
+        }
+
+        return {
+        synchronize: process.env.BACKEND_ENV === 'test',
+        migrationsRun: true,
+        entities: [
+        // jhipster-needle-add-entity-to-ormconfig-entities - JHipster will add code here, do not remove
+        ],
+        migrations: [
+        CreateTables1570200270081,
+        SeedUsersRoles1570200490072,
+        // jhipster-needle-add-migration-to-ormconfig-migrations - JHipster will add code here, do not remove
+        ],
+        autoLoadEntities: true,
+        <%_ if (prodDatabaseTypeMssql) { _%>
+        extra: {
+        trustServerCertificate: true,
+        },
+        <%_ } _%>
+        ...ormconfig,
+        };
+    <%_ } _%>
+    }
+
+    export { ormConfig };

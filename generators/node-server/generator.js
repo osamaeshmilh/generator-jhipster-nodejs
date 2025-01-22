@@ -227,9 +227,9 @@ export default class extends BaseApplicationGenerator {
       },
       async customEntityServerFiles({ application, entities }) {
         for (const entity of entities.filter(entity => !entity.skipServer && !entity.builtIn)) {
-          if (application.databaseType === 'mongodb' && entity.relationships.length > 0) {
-            throw new Error('relationships not supported in mongodb!');
-          }
+          // if (application.databaseType === 'mongodb' && entity.relationships.length > 0) {
+          //   throw new Error('relationships not supported in mongodb!');
+          // }
 
           await this.writeFiles({
             sections: entityFiles,
@@ -272,7 +272,7 @@ export default class extends BaseApplicationGenerator {
         for (const entity of entities.filter(entity => !entity.skipServer)) {
           const { entityFileName, persistClass, entityClass } = entity;
           if (!entity.builtInUserManagement) {
-            source.addEntityToNodeConfig({ entityFileName, persistClass });
+            //source.addEntityToNodeConfig({ entityFileName, persistClass });
           }
           if (!entity.builtIn) {
             source.addEntityToAppModule({ entityFileName, entityClass });
