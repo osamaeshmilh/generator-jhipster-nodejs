@@ -2,91 +2,98 @@ import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { <%= entityClass %> } from '../domain/<%= entityFileName %>.entity';
-import { <%= dtoClass %> }  from '../service/dto/<%= entityFileName %>.dto';
-import { <%= entityClass %>Mapper }  from '../service/mapper/<%= entityFileName %>.mapper';
+import { <%= dtoClass %> } from '../service/dto/<%= entityFileName %>.dto';
+import { <%= entityClass %>Mapper } from '../service/mapper/<%= entityFileName %>.mapper';
+<%_ if (databaseTypeMongodb) { _%>
+import { ObjectId } from 'mongodb';
+<%_ } _%>
 
 <%_
 const eagerLoadRelations = relationships.filter(rel => rel.ownerSide).map(rel => rel.propertyName);
-const pkType = primaryKey.tsType;
 _%>
+
 <%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
 const relations = {
-  <%_ for (const rel of eagerLoadRelations) { _%>
-  '<%= rel %>': true,
-  <%_ } _%>
-} as const;
-
+<%_ for (const rel of eagerLoadRelations) { _%>
+    '<%= rel %>': true,
 <%_ } _%>
+} as const;
+<%_ } _%>
+
 @Injectable()
 export class <%= entityClass %>Service {
-    logger = new Logger('<%= entityClass %>Service');
+logger = new Logger('<%= entityClass %>Service');
 
-    constructor(@InjectRepository(<%= entityClass %>) private <%= entityInstance %>Repository: Repository<<%= entityClass %>>) {}
+constructor(@InjectRepository(<%= entityClass %>) private <%= entityInstance %>Repository: Repository<<%= entityClass %>>) {}
 
-      async findById(id: <%= pkType %>): Promise<<%= dtoClass %> | undefined> {
-        const result = await this.<%= entityInstance %>Repository.findOne({
-<%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
-          relations,
-<%_ } _%>
-          where: { id },
-        });
-        return <%= entityClass %>Mapper.fromEntityToDTO(result);
-      }
-
-      async findByFields(options: FindOneOptions<<%= dtoClass %>>): Promise<<%= dtoClass %> | undefined> {
-        const result = await this.<%= entityInstance %>Repository.findOne(options);
-        return <%= entityClass %>Mapper.fromEntityToDTO(result);
-      }
-
-      async findAndCount(options: FindManyOptions<<%= dtoClass %>>): Promise<[<%= dtoClass %>[], number]> {
-        const resultList = await this.<%= entityInstance %>Repository.findAndCount(
-<%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
-          { ...options, relations },
+async findById(id: string): Promise<<%= dtoClass %> | undefined> {
+<%_ if (databaseTypeMongodb) { _%>
+    const options: FindOneOptions<<%= entityClass %>> = {
+    where: { _id: new ObjectId(id) } as any
+    <%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
+    , relations
+    <%_ } _%>
+    };
+    const result = await this.<%= entityInstance %>Repository.findOne(options);
 <%_ } else { _%>
-          options,
+    const result = await this.<%= entityInstance %>Repository.findOne({
+    where: { id }
+    <%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
+    , relations
+    <%_ } _%>
+    });
 <%_ } _%>
-        );
-        const <%= entityInstance %>DTO: <%= dtoClass %>[] = [];
-        if (resultList && resultList[0]) {
-            resultList[0].forEach(<%= entityInstance %> => <%= entityInstance %>DTO.push(<%= entityClass %>Mapper.fromEntityToDTO(<%= entityInstance %>)));
-            resultList[0] = <%= entityInstance %>DTO;
-        }
-        return resultList;
-      }
+return <%= entityClass %>Mapper.fromEntityToDTO(result);
+}
 
-      async save(<%= entityInstance %>DTO: <%= dtoClass %>, creator?: string): Promise<<%= dtoClass %> | undefined> {
-        const entity = <%= entityClass %>Mapper.fromDTOtoEntity(<%= entityInstance %>DTO);
-        if (creator) {
-            if (!entity.createdBy) {
-                entity.createdBy = creator;
-            }
-            entity.lastModifiedBy = creator;
-        }
-        const result = await this.<%= entityInstance %>Repository.save(entity);
-        return <%= entityClass %>Mapper.fromEntityToDTO(result);
-      }
+async findByFields(options: FindOneOptions<<%= entityClass %>>): Promise<<%= dtoClass %> | undefined> {
+const result = await this.<%= entityInstance %>Repository.findOne(options);
+return <%= entityClass %>Mapper.fromEntityToDTO(result);
+}
 
-      async update(<%= entityInstance %>DTO: <%= dtoClass %>, updater?: string): Promise<<%= dtoClass %> | undefined> {
-        const entity = <%= entityClass %>Mapper.fromDTOtoEntity(<%= entityInstance %>DTO);
-        if (updater) {
-            entity.lastModifiedBy = updater;
-        }
-      <%_ if (databaseType === 'mongodb') { _%>
-        await this.<%= entityInstance %>Repository.update(entity.id, entity);
-        return <%= entityInstance %>DTO;
-      <%_ } else { _%>
-        const result = await this.<%= entityInstance %>Repository.save(entity);
-        return <%= entityClass %>Mapper.fromEntityToDTO(result);
-      <%_ } _%>
-      }
+async findAndCount(options: FindManyOptions<<%= entityClass %>>): Promise<[<%= dtoClass %>[], number]> {
+const [entities, count] = await this.<%= entityInstance %>Repository.findAndCount(
+<%_ if (typeormRelationsSupport && eagerLoadRelations.length > 0) { _%>
+{ ...options, relations },
+<%_ } else { _%>
+options,
+<%_ } _%>
+);
 
-      async deleteById(id: <%= pkType %>): Promise<void | undefined> {
+const dtos = entities.map(entity => <%= entityClass %>Mapper.fromEntityToDTO(entity));
+return [dtos, count];
+}
+
+async save(<%= entityInstance %>DTO: <%= dtoClass %>, creator?: string): Promise<<%= dtoClass %> | undefined> {
+const entity = <%= entityClass %>Mapper.fromDTOtoEntity(<%= entityInstance %>DTO);
+if (creator) {
+if (!entity.createdBy) {
+entity.createdBy = creator;
+}
+entity.lastModifiedBy = creator;
+}
+const result = await this.<%= entityInstance %>Repository.save(entity);
+return <%= entityClass %>Mapper.fromEntityToDTO(result);
+}
+
+async update(<%= entityInstance %>DTO: <%= dtoClass %>, updater?: string): Promise<<%= dtoClass %> | undefined> {
+return this.save(<%= entityInstance %>DTO, updater);
+}
+
+async deleteById(id: string): Promise<void | undefined> {
+    <%_ if (databaseTypeMongodb) { _%>
+        await this.<%= entityInstance %>Repository.delete({ id: new ObjectId(id) });
+        const entityFind = await this.findById(id);
+        if (entityFind) {
+        throw new HttpException('Error, entity not deleted!', HttpStatus.NOT_FOUND);
+        }
+    <%_ } else { _%>
         await this.<%= entityInstance %>Repository.delete(id);
         const entityFind = await this.findById(id);
         if (entityFind) {
-          throw new HttpException('Error, entity not deleted!', HttpStatus.NOT_FOUND);
+        throw new HttpException('Error, entity not deleted!', HttpStatus.NOT_FOUND);
         }
-        return;
-      }
-
-}
+    <%_ } _%>
+    return;
+    }
+    }

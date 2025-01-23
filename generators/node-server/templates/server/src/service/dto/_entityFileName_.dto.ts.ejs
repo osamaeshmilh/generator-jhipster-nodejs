@@ -5,6 +5,7 @@ import { IsNotEmpty, MinLength, MaxLength, Length, Min, Max, Matches } from 'cla
 <%_ } _%>
 <%_ if (databaseTypeMongodb) { _%>
 import { Transform } from 'class-transformer';
+import { ObjectId } from 'mongodb';
 <%_ } _%>
 import { BaseDTO } from './base.dto';
 
@@ -36,66 +37,75 @@ for (idx in relationships) {
 _%>
 
 <%_ Object.keys(uniqueEntities).forEach(function(entityDto) { _%>
-import { <%= entityDto %> } from './<%= uniqueEntities[entityDto] %>.dto';
+    import { <%= entityDto %> } from './<%= uniqueEntities[entityDto] %>.dto';
 <%_ }); _%>
 <%_ Object.keys(uniqueEnums).forEach(function(enumClass) { _%>
-import { <%= enumClass %> } from '../../domain/enumeration/<%= uniqueEnums[enumClass] %>';
+    import { <%= enumClass %> } from '../../domain/enumeration/<%= uniqueEnums[enumClass] %>';
 <%_ }); _%>
 
 <%_ if (isUserRelationship === true) { _%>
-import { <%= user.dtoClass%> } from './user.dto';
+    import { <%= user.dtoClass%> } from './user.dto';
 <%_ } _%>
 
 /**
- * A <%= dtoClass %> object.
- */
+* A <%= dtoClass %> object.
+*/
 export class <%= dtoClass %> extends BaseDTO {
-<%_ if (databaseTypeMongodb) { _%>
-  @Transform(({ value }) => value?.toHexString ? value?.toHexString() : value, {toPlainOnly: true})
-<%_ } _%>
-  <%= primaryKey.name %>?: <%= primaryKey.tsType %>;
 
-    <%_ for (idx in fieldsWithoutId) {
-        const field = fieldsWithoutId[idx];
-       if (typeof field.javadoc !== 'undefined') { _%>
+<%_ for (idx in fieldsWithoutId) {
+    const field = fieldsWithoutId[idx];
+if (typeof field.javadoc !== 'undefined') { _%>
     <%- formatAsFieldJavadoc(field.javadoc) %>
-    <%_ }
-        let required = false;
-        const fieldValidate = field.fieldValidate;
-        const fieldValidateRules = field.fieldValidateRules;
-        const fieldType = field.fieldType;
-        const fieldTypeBlobContent = field.fieldTypeBlobContent;
-        const fieldName = field.fieldName;
-        const fieldNameUnderscored = field.fieldNameUnderscored;
-        const fieldNameAsDatabaseColumn = field.fieldNameAsDatabaseColumn;
-        if (fieldValidate === true) {
-            if (fieldValidateRules.includes('required')) {
-                required = true;
-            }
-            _%>
-            <%- include('../../common/field_validators', { field }); -%>
-        <%_ } _%>
-            <%_ if (field.fieldIsEnum) { _%>
-            @ApiProperty({ enum: <%= fieldType %>, <%_ if (typeof field.javadoc != 'undefined') { _%> description: '<%- formatAsApiDescription(field.javadoc) %>' <%_ } else { _%> description: '<%= fieldName %> enum field' <%_ } if (!required) { _%>, required: false <%_ } _%>})
-            <%_ } else { _%>
-            @ApiProperty({ <%_ if (typeof field.javadoc != 'undefined') { _%> description: '<%- formatAsApiDescription(field.javadoc) %>' <%_ } else { _%> description: '<%= fieldName %> field' <%_ } if (!required) { _%>, required: false <%_ } _%>})
-            <%_ } _%>
-        <%= fieldName %><%- field.fieldValidationRequired ? '' : '?' %>: <%= field.nodejsFieldType %>;
+<%_ }
+    let required = false;
+    const fieldValidate = field.fieldValidate;
+    const fieldValidateRules = field.fieldValidateRules;
+    const fieldType = field.fieldType;
+    const fieldTypeBlobContent = field.fieldTypeBlobContent;
+    const fieldName = field.fieldName;
+if (fieldValidate === true) {
+    if (fieldValidateRules.includes('required')) {
+        required = true;
+    }
+_%>
+<%- include('../../common/field_validators', { field }); -%>
+<%_ } _%>
+<%_ if (field.fieldIsEnum) { _%>
+    @ApiProperty({ enum: <%= fieldType %>, <%_ if (typeof field.javadoc != 'undefined') { _%> description: '<%- formatAsApiDescription(field.javadoc) %>' <%_ } else { _%> description: '<%= fieldName %> enum field' <%_ } if (!required) { _%>, required: false <%_ } _%>})
+<%_ } else { _%>
+@ApiProperty({ <%_ if (typeof field.javadoc != 'undefined') { _%> description: '<%- formatAsApiDescription(field.javadoc) %>' <%_ } else { _%> description: '<%= fieldName %> field' <%_ } if (!required) { _%>, required: false <%_ } _%>})
+<%_ } _%>
+<%= fieldName %><%- field.fieldValidationRequired ? '' : '?' %>: <%= field.nodejsFieldType %>;
 
-        <%_ if ((fieldType === 'byte[]' || fieldType === 'ByteBuffer') && fieldTypeBlobContent !== 'text') { _%>
+<%_ if ((fieldType === 'byte[]' || fieldType === 'ByteBuffer') && fieldTypeBlobContent !== 'text') { _%>
+    <%= fieldName %>ContentType<%- field.fieldValidationRequired ? '' : '?' %>: string;
+<%_ }
+} _%>
 
-        <%= fieldName %>ContentType<%- field.fieldValidationRequired ? '' : '?' %>: string;
-        <%_ }
-        } _%>
+<%_ for (const relationship of relationships) {
+if (typeof relationship.javadoc != 'undefined') { _%>
+    <%- formatAsFieldJavadoc(relationship.javadoc) %>
+<%_ } _%>
+<%_ if (databaseTypeMongodb) { _%>
+    @ApiProperty({
+    description: 'ID reference for <%= relationship.propertyName %>',
+    required: <%= relationship.relationshipValidationRequired ? 'true' : 'false' %>
+    })
+    @Transform(({ value }) => value?.toHexString?.() ?? value, { toPlainOnly: true })
+    <%= relationship.propertyName %>Id<%- relationship.relationshipValidationRequired ? '' : '?' %>: string<%- relationship.collection ? '[]' : '' %>;
+<%_ } _%>
 
-        <%_
-  for (const relationship of relationships) {
-        if (typeof relationship.javadoc != 'undefined') { _%>
-  <%- formatAsFieldJavadoc(relationship.javadoc) %>
-        <%_ } _%>
-  @ApiProperty({ type: () => <%= relationship.otherEntity.dtoClass %><%- relationship.collection ? ', isArray: true' : '' %>, <%_ if (typeof relationship.javadoc != 'undefined') { _%>  description: '<%- formatAsApiDescription(relationship.javadoc) %>' <%_ } else { _%> description: '<%= relationship.propertyName %> relationship' <%_ } _%> })
-  <%= relationship.propertyName %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= relationship.otherEntity.dtoClass %><%- relationship.collection ? '[]' : '' %>;
-  <%_ } _%>
+@ApiProperty({
+type: () => <%= relationship.otherEntity.dtoClass %><%- relationship.collection ? ', isArray: true' : '' %>,
+<%_ if (typeof relationship.javadoc != 'undefined') { _%>
+    description: '<%- formatAsApiDescription(relationship.javadoc) %>'
+<%_ } else { _%>
+    description: '<%= relationship.propertyName %> relationship'
+<%_ } _%>,
+required: false
+})
+<%= relationship.propertyName %><%- relationship.relationshipValidationRequired ? '' : '?' %>: <%= relationship.otherEntity.dtoClass %><%- relationship.collection ? '[]' : '' %>;
+<%_ } _%>
 
-  // jhipster-needle-entity-add-field - JHipster will add fields here, do not remove
+// jhipster-needle-entity-add-field - JHipster will add fields here, do not remove
 }

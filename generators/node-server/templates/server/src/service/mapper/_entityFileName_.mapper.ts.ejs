@@ -1,37 +1,157 @@
 import { <%= persistClass %> } from '../../domain/<%= entityFileName %>.entity';
 import { <%= dtoClass %> } from '../dto/<%= entityFileName %>.dto';
+<%_ if (databaseTypeMongodb) { _%>
+import { ObjectId } from 'mongodb';
+<%_ } _%>
 
+<%_
+        for (idx in relationships) {
+    const relationship = relationships[idx];
+_%>
+    import { <%= relationship.otherEntity.entityClass %>Mapper } from './<%= relationship.otherEntityFileName %>.mapper';
+<%_
+
+}
+_%>
 
 /**
- * A <%= entityClass %> mapper object.
- */
+* A <%= entityClass %> mapper object.
+*/
 export class <%= entityClass %>Mapper {
+static fromDTOtoEntity(entityDTO: <%= dtoClass %>): <%= persistClass %> {
+if (!entityDTO) {
+return;
+}
+const entity = new <%= persistClass %>();
 
-  static fromDTOtoEntity (entityDTO: <%= dtoClass %>): <%= persistClass %> {
-    if (!entityDTO) {
-      return;
+<%_ if (databaseTypeMongodb) { _%>
+// Convert string id to ObjectId if present
+if (entityDTO.id) {
+entity.id = typeof entityDTO.id === 'string' ? new ObjectId(entityDTO.id) : entityDTO.id;
+}
+<%_ } _%>
+
+<%_ for (idx in fields) {
+if (fields[idx].fieldName !== 'id') {
+_%>
+    entity.<%= fields[idx].fieldName %> = entityDTO.<%= fields[idx].fieldName %>;
+<%_
+}
+}
+_%>
+
+<%_ if (databaseTypeMongodb) { _%>
+<%_ for (idx in relationships) {
+    const relationship = relationships[idx];
+    const relationshipName = relationship.relationshipName;
+    const relationshipFieldName = relationship.relationshipFieldName;
+    const relationshipFieldNamePlural = relationship.relationshipFieldNamePlural;
+    const relationshipType = relationship.relationshipType;
+    const otherEntityClass = relationship.otherEntity.entityClass;
+if (relationshipType === 'one-to-many' || relationshipType === 'many-to-many') {
+_%>
+
+    if (entityDTO.<%= relationshipFieldNamePlural %>) {
+    entity.<%= relationshipFieldNamePlural %> = entityDTO.<%= relationshipFieldNamePlural %>.map(dto =>
+    <%= otherEntityClass %>Mapper.fromDTOtoEntity(dto)
+    );
     }
-    let entity = new <%= persistClass %>();
-    const fields = Object.getOwnPropertyNames(entityDTO);
-    fields.forEach(field => {
-        entity[field] = entityDTO[field];
-    });
-    return entity;
+<%_ } else { _%>
 
-  }
-
-  static fromEntityToDTO (entity: <%= persistClass %>): <%= dtoClass %> {
-    if (!entity) {
-      return;
+    if (entityDTO.<%= relationshipFieldName %>) {
+    entity.<%= relationshipFieldName %> = <%= otherEntityClass %>Mapper.fromDTOtoEntity(entityDTO.<%= relationshipFieldName %>);
     }
-    let entityDTO = new <%= dtoClass %>();
+<%_
+}
+}
+_%>
+<%_ } else { _%>
+<%_ for (idx in relationships) {
+    const relationship = relationships[idx];
+    const otherEntityClass = relationship.otherEntity.entityClass;
+_%>
+if (entityDTO.<%= relationship.relationshipFieldName %>) {
+<%_ if (relationship.collection) { _%>
+    entity.<%= relationship.relationshipFieldName %> = entityDTO.<%= relationship.relationshipFieldName %>.map(dto =>
+    <%= otherEntityClass %>Mapper.fromDTOtoEntity(dto)
+    );
+<%_ } else { _%>
+    entity.<%= relationship.relationshipFieldName %> = <%= otherEntityClass %>Mapper.fromDTOtoEntity(entityDTO.<%= relationship.relationshipFieldName %>);
+<%_ } _%>
+}
+<%_
+}
+}
+_%>
 
-    const fields = Object.getOwnPropertyNames(entity);
+return entity;
+}
 
-    fields.forEach(field => {
-        entityDTO[field] = entity[field];
-    });
+static fromEntityToDTO(entity: <%= persistClass %>): <%= dtoClass %> {
+if (!entity) {
+return;
+}
+const entityDTO = new <%= dtoClass %>();
 
-    return entityDTO;
-  }
+<%_ if (databaseTypeMongodb) { _%>
+// Convert ObjectId to string for base id
+entityDTO.id = entity.id?.toHexString?.();
+<%_ } else { _%>
+entityDTO.id = entity.id;
+<%_ } _%>
+
+<%_ for (idx in fields) {
+if (fields[idx].fieldName !== 'id') {
+_%>
+    entityDTO.<%= fields[idx].fieldName %> = entity.<%= fields[idx].fieldName %>;
+<%_
+}
+} _%>
+
+<%_ if (databaseTypeMongodb) { _%>
+<%_ for (idx in relationships) {
+    const relationship = relationships[idx];
+    const relationshipName = relationship.relationshipName;
+    const relationshipFieldName = relationship.relationshipFieldName;
+    const relationshipFieldNamePlural = relationship.relationshipFieldNamePlural;
+    const relationshipType = relationship.relationshipType;
+    const otherEntityClass = relationship.otherEntity.entityClass;
+if (relationshipType === 'one-to-many' || relationshipType === 'many-to-many') {
+_%>
+
+    if (entity.<%= relationshipFieldNamePlural %>) {
+    entityDTO.<%= relationshipFieldNamePlural %> = entity.<%= relationshipFieldNamePlural %>.map(related =>
+    <%= otherEntityClass %>Mapper.fromEntityToDTO(related)
+    );
+    }
+<%_ } else { _%>
+
+    if (entity.<%= relationshipFieldName %>) {
+    entityDTO.<%= relationshipFieldName %> = <%= otherEntityClass %>Mapper.fromEntityToDTO(entity.<%= relationshipFieldName %>);
+    }
+<%_
+}
+}
+_%>
+<%_ } else { _%>
+<%_ for (idx in relationships) {
+    const relationship = relationships[idx];
+    const otherEntityClass = relationship.otherEntity.entityClass;
+_%>
+if (entity.<%= relationship.relationshipFieldName %>) {
+<%_ if (relationship.collection) { _%>
+    entityDTO.<%= relationship.relationshipFieldName %> = entity.<%= relationship.relationshipFieldName %>.map(related =>
+    <%= otherEntityClass %>Mapper.fromEntityToDTO(related)
+    );
+<%_ } else { _%>
+    entityDTO.<%= relationship.relationshipFieldName %> = <%= otherEntityClass %>Mapper.fromEntityToDTO(entity.<%= relationship.relationshipFieldName %>);
+<%_ } _%>
+}
+<%_
+}
+}
+_%>
+
+return entityDTO;
+}
 }
