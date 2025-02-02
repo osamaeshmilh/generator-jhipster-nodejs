@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { HeaderUtil } from '../../client/header-util';
 import { ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { AuthService } from '../../service/auth.service';
+import { RoleType } from '../../security';
 
 @Controller('api')
 @UseInterceptors(LoggingInterceptor, ClassSerializerInterceptor)
@@ -39,20 +40,19 @@ export class PublicUserController {
   }
 
 
-  @Get('/authorities')
-  @ApiOperation({ summary: 'Get the list of user roles' })
-  @ApiResponse({
-    status: 200,
-    description: 'List all user roles',
-    type: 'string',
-    isArray: true,
-  })
-  getAuthorities(@Req() req: any): any {
-    const user: any = req.user;
-    if (!user) {
-        return [];
-     }
-    return user.authorities;
-  }
+@Get('/authorities')
+@ApiOperation({ summary: 'Get the list of user roles' })
+@ApiResponse({
+status: 200,
+description: 'List all user roles',
+type: Object,
+isArray: true,
+})
+getAuthorities(@Req() req: any): { id: number; name: string }[] {
+return Object.values(RoleType).map((name, index) => ({
+id: index + 1,
+name,
+}));
+}
 
 }
