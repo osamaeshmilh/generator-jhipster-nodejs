@@ -122,9 +122,6 @@ exports[`SubGenerator node-server of nodejs JHipster blueprint > run > should su
   "server/src/config/application.yml": {
     "stateCleared": "modified",
   },
-  "server/src/domain/authority.entity.ts": {
-    "stateCleared": "modified",
-  },
   "server/src/domain/base/base.entity.ts": {
     "stateCleared": "modified",
   },
@@ -673,9 +670,6 @@ exports[`SubGenerator node-server of nodejs JHipster blueprint > without client 
     "stateCleared": "modified",
   },
   "server/src/config/application.yml": {
-    "stateCleared": "modified",
-  },
-  "server/src/domain/authority.entity.ts": {
     "stateCleared": "modified",
   },
   "server/src/domain/base/base.entity.ts": {

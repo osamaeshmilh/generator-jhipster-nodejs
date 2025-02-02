@@ -1,28 +1,22 @@
 /* eslint-disable max-classes-per-file */
-import { BaseEntity } from './base.entity';
 import { Type, Expose as JsonProperty } from 'class-transformer';
 import { ParsedQs } from 'qs';
 
-<%_ if (typeormOrderSupport) { _%>
 export class Sort {
 public property: string;
-public direction: 'ASC' | 'DESC' | string;
-constructor(sort?: string) {
+public direction: 'asc' | 'desc' | string;
+constructor(sort: string) {
 if (sort) {
 [this.property, this.direction] = sort.split(',');
-} else {
-this.property = 'id';
-this.direction = 'ASC';
 }
 }
 
-asOrder(): Record<string, string> {
-const order: Record<string, string> = {};
+asOrder(): any {
+const order = {};
 order[this.property] = this.direction;
 return order;
 }
 }
-<%_ } _%>
 
 // Updated to match Express query types exactly
 export type ExpressQueryValue = string | ParsedQs | (string | ParsedQs)[];
@@ -32,23 +26,13 @@ export class PageRequest {
 page = 0;
 @JsonProperty()
 size = 20;
-<%_ if (typeormOrderSupport) { _%>
 @Type(() => Sort)
 sort: Sort = new Sort('id,ASC');
-<%_ } _%>
 
-constructor(
-page: ExpressQueryValue | undefined,
-size: ExpressQueryValue | undefined
-<%_ if (typeormOrderSupport) { _%>
-,sort?: ExpressQueryValue
-<%_ } _%>
-) {
+constructor(page: ExpressQueryValue | undefined, size: ExpressQueryValue | undefined, sort: ExpressQueryValue | undefined) {
 this.page = PageRequest.handleNumberTypes(page, this.page);
 this.size = PageRequest.handleNumberTypes(size, this.size);
-<%_ if (typeormOrderSupport) { _%>
 this.sort = new Sort(PageRequest.handleQueryType(sort));
-<%_ } _%>
 }
 
 public static handleNumberTypes(pp: ExpressQueryValue | undefined, fallback: number): number {
@@ -95,10 +79,10 @@ return undefined;
 }
 }
 
-export class Page<T extends BaseEntity> {
+export class Page<T> {
     constructor(
     public content: T[],
     public total: number,
-    public pageable: PageRequest
+    public pageable: PageRequest,
     ) {}
     }

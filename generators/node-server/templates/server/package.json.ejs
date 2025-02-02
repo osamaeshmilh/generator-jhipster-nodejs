@@ -31,6 +31,8 @@
     "typeorm:schema:sync": "npm run typeorm -- schema:sync"
   },
   "dependencies": {
+"@nestjs-modules/mailer": "^2.0.2",
+
     "<%- nodeProdDatabaseDriver %>": "<%- nodeServerDependencies[nodeProdDatabaseDriver] %>",
     "<%- nodeDevDatabaseDriver %>": "<%- nodeServerDependencies[nodeDevDatabaseDriver] %>",
 <%_ if (authenticationType === 'oauth2') { _%>

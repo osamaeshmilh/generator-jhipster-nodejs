@@ -6,13 +6,6 @@ import { Exclude } from 'class-transformer';
 @Entity('<%- jhiTablePrefix %>_user')
 export class <%= user.persistClass %> extends BaseEntity {
 
-<%_ if (databaseTypeMongodb) { _%>
-  @ObjectIdColumn({ name: '_<%- user.primaryKey.name %>' })
-<%_ } else if (databaseTypeSql) { _%>
-  @PrimaryGeneratedColumn(<%- user.primaryKey.typeUUID ? "'uuid'" : '' %>)
-<%_ } _%>
-  <%- user.primaryKey.name %>?: <%- user.primaryKey.tsType %>;
-
   @Column({ unique: true })
   login: string;
   @Column({ nullable: true })
@@ -26,14 +19,8 @@ export class <%= user.persistClass %> extends BaseEntity {
   @Column({default: 'en'})
   langKey?: string;
 
-  <%_ if (databaseType === 'mongodb') { _%>
   @Column()
-  authorities?: Authority[];
-  <%_ } else { _%>
-  @ManyToMany(() => Authority)
-  @JoinTable()
-  authorities?: any[];
-  <%_ } _%>
+  authorities?: string[];
 
   @Column({
     type: "varchar"

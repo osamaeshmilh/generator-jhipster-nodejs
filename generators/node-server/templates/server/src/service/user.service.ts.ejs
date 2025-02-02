@@ -2,100 +2,58 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { <%= user.persistClass %> } from '../domain/user.entity';
-import { <%= user.dtoClass%> } from './dto/user.dto';
-import { UserMapper } from './mapper/user.mapper';
-import { User } from '../domain/user.entity';
-<%_ if (authenticationType === 'jwt') { _%>
 import { transformPassword } from '../security';
-<%_ } _%>
+import { <%= user.dtoClass %> } from './dto/user.dto';
+import { UserMapper } from './mapper/user.mapper';
+import { ObjectId } from 'mongodb';
 
-<%_ if (typeormRelationsSupport) { _%>
-const relations = { authorities: true } as const;
-
-<%_ } _%>
 @Injectable()
 export class UserService {
-    constructor(@InjectRepository(User) private userRepository: Repository<User>) {}
+constructor(@InjectRepository(<%= user.persistClass %>) private userRepository: Repository<<%= user.persistClass %>>) {}
 
-    async findById(id: <%= user.primaryKey.tsType %>): Promise<<%= user.dtoClass%> | undefined> {
-        const result = await this.userRepository.findOneBy({ id });
-        return UserMapper.fromEntityToDTO(this.flatAuthorities(result))
-    }
+async findById(id: string): Promise<<%= user.dtoClass %> | undefined> {
+const result = await this.userRepository.findOne({ where: { _id: new ObjectId(id) } as any });
+return UserMapper.fromEntityToDTO(result);
+}
 
-    async findByFields(options: FindOneOptions<<%= user.dtoClass%>>): Promise<<%= user.dtoClass%> | undefined> {
-        const result = await this.userRepository.findOne(
-<%_ if (typeormRelationsSupport) { _%>
-          { ...options, relations },
-<%_ } else { _%>
-          options,
-<%_ } _%>
-        );
-        return UserMapper.fromEntityToDTO(this.flatAuthorities(result));
-    }
+async findByFields(options: FindOneOptions<<%= user.persistClass %>>): Promise<<%= user.dtoClass %> | undefined> {
+const result = await this.userRepository.findOne(options);
+return UserMapper.fromEntityToDTO(result);
+}
 
-    async find(options: FindManyOptions<<%= user.dtoClass%>>): Promise<<%= user.dtoClass%> | undefined> {
-        const result = await this.userRepository.findOne(options);
-        return UserMapper.fromEntityToDTO(this.flatAuthorities(result));
-    }
+async find(options: FindManyOptions<<%= user.persistClass %>>): Promise<<%= user.dtoClass %> | undefined> {
+const result = await this.userRepository.findOne(options);
+return UserMapper.fromEntityToDTO(result);
+}
 
-    async findAndCount(options: FindManyOptions<<%= user.dtoClass%>>): Promise<[<%= user.dtoClass%>[], number]> {
-        const resultList = await this.userRepository.findAndCount(
-<%_ if (typeormRelationsSupport) { _%>
-          { ...options, relations },
-<%_ } else { _%>
-          options,
-<%_ } _%>
-        );
-        const usersDTO: <%= user.dtoClass%>[] = [];
-        if (resultList && resultList[0]) {
-            resultList[0].forEach(user => usersDTO.push(UserMapper.fromEntityToDTO(this.flatAuthorities(user))));
-            resultList[0] = usersDTO;
-        }
-        return resultList;
-    }
+async findAndCount(options: FindManyOptions<<%= user.persistClass %>>): Promise<[<%= user.dtoClass %>[], number]> {
+const [entities, count] = await this.userRepository.findAndCount(options);
+const dtos = entities.map(entity => UserMapper.fromEntityToDTO(entity));
+return [dtos, count];
+}
 
-    async save(userDTO: <%= user.dtoClass%>, creator?: string<% if (authenticationType === 'jwt') { %>, updatePassword = false<% } %>): Promise<<%= user.dtoClass%> | undefined> {
-        const user = this.convertInAuthorities(UserMapper.fromDTOtoEntity(userDTO));
-<%_ if (authenticationType === 'jwt') { _%>
-        if (updatePassword) {
-            await transformPassword(user);
-        }
-<%_ } _%>
-        if (creator) {
-            if (!user.createdBy ) {
-                user.createdBy = creator;
-            }
-            user.lastModifiedBy = creator;
-        }
-        const result = await this.userRepository.save(user);
-        return UserMapper.fromEntityToDTO(this.flatAuthorities(result));
-    }
+async save(userDTO: <%= user.dtoClass %>, creator?: string, updatePassword = false): Promise<<%= user.dtoClass %> | undefined> {
+const user = UserMapper.fromDTOtoEntity(userDTO);
+if (updatePassword) {
+await transformPassword(user);
+}
+if (creator) {
+if (!user.createdBy) {
+user.createdBy = creator;
+}
+user.lastModifiedBy = creator;
+}
+const result = await this.userRepository.save(user);
+return UserMapper.fromEntityToDTO(result);
+}
 
-    async update(userDTO: <%= user.dtoClass%>, updater?: string): Promise<<%= user.dtoClass%> | undefined> {
-        return this.save(userDTO, updater);
-    }
+async update(userDTO: <%= user.dtoClass %>, updater?: string): Promise<<%= user.dtoClass %> | undefined> {
+return this.save(userDTO, updater);
+}
 
-    async delete(userDTO: <%= user.dtoClass%>): Promise<<%= user.dtoClass%> | undefined> {
-        const user = UserMapper.fromDTOtoEntity(userDTO);
-        const result = await this.userRepository.remove(user)
-        return UserMapper.fromEntityToDTO(result);
-    }
-
-    private flatAuthorities(user: any): <%= user.persistClass %> {
-        if (user && user.authorities) {
-            const authorities: string[] = [];
-            user.authorities.forEach(authority => authorities.push(authority.name));
-            user.authorities = authorities;
-        }
-        return user;
-    }
-
-    private convertInAuthorities(user: any): <%= user.persistClass %> {
-        if (user && user.authorities) {
-            const authorities: any[] = [];
-            user.authorities.forEach(authority => authorities.push({ name: authority }));
-            user.authorities = authorities;
-        }
-        return user;
-    }
+async delete(userDTO: <%= user.dtoClass %>): Promise<<%= user.dtoClass %> | undefined> {
+const user = UserMapper.fromDTOtoEntity(userDTO);
+const result = await this.userRepository.remove(user);
+return UserMapper.fromEntityToDTO(result);
+}
 }

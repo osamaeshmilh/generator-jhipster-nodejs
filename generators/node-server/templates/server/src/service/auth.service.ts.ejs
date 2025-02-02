@@ -1,155 +1,134 @@
-import { Injectable, <%_ if (authenticationType === 'jwt') { _%> HttpException, HttpStatus,  <%_ } _%> Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, Repository } from 'typeorm';
+import { Injectable, <%_ if (authenticationType === 'jwt') { _%> HttpException, HttpStatus, Logger <%_ } _%> } from '@nestjs/common';
+import { FindManyOptions } from 'typeorm';
 <%_ if (authenticationType === 'jwt') { _%>
-import { comparePassword } from '../security/password-util';
 import { JwtService } from '@nestjs/jwt';
+import { comparePassword } from '../security/password-util';
 import { UserLoginDTO } from '../service/dto/user-login.dto';
 import { Payload } from '../security/payload.interface';
 <%_ } _%>
-import { Authority } from '../domain/authority.entity';
 import { UserService } from '../service/user.service';
 import { <%= user.dtoClass%> } from './dto/user.dto';
-
-<%_
-const userIdType = user.primaryKey.tsType;
-_%>
-
+import * as console from 'node:console';
+import { User } from '../domain/user.entity';
 
 @Injectable()
 export class AuthService {
-    logger = new Logger('AuthService');
-  constructor(
-    <%_ if (authenticationType === 'jwt') { _%>
-    private readonly jwtService: JwtService,
-    <%_ } _%>
-    @InjectRepository(Authority) private authorityRepository: Repository<Authority>,
-    private userService: UserService,
-  ) {}
+logger = new Logger('AuthService');
 
-  <%_ if (authenticationType === 'jwt') { _%>
-  async login(userLogin: UserLoginDTO): Promise<any> {
+constructor(
+<%_ if (authenticationType === 'jwt') { _%>
+private readonly jwtService: JwtService,
+<%_ } _%>
+private userService: UserService
+) {}
+
+<%_ if (authenticationType === 'jwt') { _%>
+    async login(userLogin: UserLoginDTO): Promise<any> {
     const loginUserName = userLogin.username;
     const loginPassword = userLogin.password;
+
     if (!loginUserName || !loginPassword) {
-      throw new HttpException('Username and password are required!', HttpStatus.BAD_REQUEST);
+    throw new HttpException('Username and password are required!', HttpStatus.BAD_REQUEST);
     }
 
     const userFind = await this.userService.findByFields({ where: { login: loginUserName } });
     const validPassword = !!userFind && comparePassword(loginPassword, userFind.password);
+
     if (!userFind || !validPassword) {
-      throw new HttpException('Invalid login name or password!', HttpStatus.UNAUTHORIZED);
+    throw new HttpException('INVALID_LOGIN_OR_PASSWORD', HttpStatus.UNAUTHORIZED);
     }
 
     if (userFind && !userFind.activated) {
-      throw new HttpException('Your account is not been activated!', HttpStatus.UNAUTHORIZED);
+    throw new HttpException('Your account is not been activated!', HttpStatus.UNAUTHORIZED);
     }
 
-    const user = await this.findUserWithAuthById(userFind.id);
-
-    const payload: Payload = { id: user.id, username: user.login, authorities: user.authorities };
-
-    /* eslint-disable */
-    return {
-      id_token: this.jwtService.sign(payload),
+    const payload: Payload = {
+    id: userFind.id.toString(),
+    username: userFind.login,
+    authorities: userFind.authorities
     };
-  }
 
-  /* eslint-enable */
-  async validateUser(payload: Payload): Promise<<%= user.dtoClass%> | undefined> {
-    return await this.findUserWithAuthById(payload.id);
-  }
+    const expiresIn = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    //await this.updateUserRefreshToken(userFind.login, refreshToken, expiresIn);
 
-  async findUserWithAuthById(userId: <%= userIdType %>): Promise<<%= user.dtoClass%> | undefined> {
-    <%_ if (databaseType === 'mongodb') { _%>
-    const userDTO: <%= user.dtoClass%> = await this.userService.findById(userId);
-    <%_ } else { _%>
-    const userDTO: <%= user.dtoClass%> = await this.userService.findByFields({ where: { id: userId } });
-    <%_ } _%>
-    return userDTO;
-  }
-
-  async getAccount(userId: <%= userIdType %>): Promise<<%= user.dtoClass%> | undefined> {
-    const userDTO: <%= user.dtoClass%> = await this.findUserWithAuthById(userId);
-    if (!userDTO) {
-      return;
-    }
-    return userDTO;
-  }
-
-  async changePassword(userLogin: string, currentClearTextPassword: string, newPassword: string): Promise<void> {
-    const userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: userLogin } });
-    if (!userFind) {
-      throw new HttpException('Invalid login name!', HttpStatus.BAD_REQUEST);
+    return {
+    id_token: this.jwtService.sign(payload),
+    refresh_token: refreshToken,
+    expires_in: expiresIn
+    };
     }
 
-    if (!comparePassword(currentClearTextPassword, userFind.password)) {
-      throw new HttpException('Invalid password!', HttpStatus.BAD_REQUEST);
-    }
-    userFind.password = newPassword;
-    await this.userService.save(userFind, userLogin, true);
-    return;
-  }
 
-  async registerNewUser (newUser: <%= user.dtoClass%>) : Promise<<%= user.dtoClass%>> {
-    let userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: newUser.login} });
-    if (userFind) {
-      throw new HttpException('Login name already used!', HttpStatus.BAD_REQUEST);
-    }
-    userFind = await this.userService.findByFields({ where: { email: newUser.email } });
-    if (userFind) {
-      throw new HttpException('Email is already in use!', HttpStatus.BAD_REQUEST);
-    }
-    newUser.authorities = ['ROLE_USER'];
-    const user: <%= user.dtoClass%> = await this.userService.save(newUser, newUser.login, true);
-    return user;
-  }
-
-  async updateUserSettings(userLogin: string, newUserInfo: <%= user.dtoClass%>) : Promise<<%= user.dtoClass%>> {
-    const userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: userLogin } });
-    if (!userFind) {
-      throw new HttpException('Invalid login name!', HttpStatus.BAD_REQUEST);
-    }
-    const userFindEmail: <%= user.dtoClass%> = await this.userService.findByFields({ where: { email: newUserInfo.email } });
-    if (userFindEmail && newUserInfo.email !== userFind.email) {
-      throw new HttpException('Email is already in use!', HttpStatus.BAD_REQUEST);
-    }
-
-    userFind.firstName = newUserInfo.firstName;
-    userFind.lastName = newUserInfo.lastName;
-    userFind.email = newUserInfo.email;
-    userFind.langKey = newUserInfo.langKey;
-    await this.userService.save(userFind, userLogin);
-    return userFind;
-  }
-
-  <%_ } else if (authenticationType === 'oauth2') { _%>
-    async findUserOrSave(loginUser: <%= user.dtoClass%>): Promise<<%= user.dtoClass%> | undefined> {
-        if (loginUser.login && loginUser.password && !loginUser.email) {
-            loginUser.email = loginUser.login + '@localhost.it';
+        async validateUser(payload: Payload): Promise<<%= user.dtoClass%> | undefined> {
+        return await this.findUserWithAuthByLogin(payload.username);
         }
-        let userFound: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: loginUser.login } });
 
-        if (!userFound) {
-          const authoritiesName = [];
-          loginUser.authorities.forEach(authority => authoritiesName.push({ name: authority }));
-          userFound = Object.assign({}, loginUser);
-          userFound.authorities = authoritiesName;
-          await this.userService.save(userFound, loginUser.login);
+        async findUserWithAuthByLogin(login: string): Promise<<%= user.dtoClass%> | undefined> {
+        const userDTO: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login } });
+        return userDTO;
         }
-        return loginUser;
-      }
 
-   getAccount(userDTO: <%= user.dtoClass%>): any {
-    if (!userDTO) {
-       return;
-    }
-    return userDTO;
-   }
+        async getAccount(login: string): Promise<<%= user.dtoClass%> | undefined> {
+        const userDTO: <%= user.dtoClass%> = await this.findUserWithAuthByLogin(login);
+        console.log(userDTO);
+        if (!userDTO) {
+        return;
+        }
+        return userDTO;
+        }
 
-  <%_ } _%>
+        async changePassword(userLogin: string, currentClearTextPassword: string, newPassword: string): Promise<void> {
+            const userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: userLogin } });
+            if (!userFind) {
+            throw new HttpException('Invalid login name!', HttpStatus.BAD_REQUEST);
+            }
 
-  async getAllUsers(options: FindManyOptions<<%= user.dtoClass%>>): Promise<[<%= user.dtoClass%>[], number]> {
-    return await this.userService.findAndCount(options);
-  }
-}
+            if (!comparePassword(currentClearTextPassword, userFind.password)) {
+            throw new HttpException('Invalid password!', HttpStatus.BAD_REQUEST);
+            }
+            userFind.password = newPassword;
+            await this.userService.save(userFind, userLogin, true);
+            }
+
+            async registerNewUser(newUser: <%= user.dtoClass%>, moreRoles: string[] = []): Promise<<%= user.dtoClass%>> {
+            let userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: newUser.login } });
+            if (userFind) {
+            throw new HttpException('Login name already used!', HttpStatus.BAD_REQUEST);
+            }
+
+            userFind = await this.userService.findByFields({ where: { email: newUser.email } });
+            if (userFind) {
+            throw new HttpException('Email is already in use!', HttpStatus.BAD_REQUEST);
+            }
+
+            newUser.authorities = ['ROLE_USER', ...moreRoles];
+            return await this.userService.save(newUser, newUser.login, true);
+            }
+
+            async updateUserSettings(userLogin: string, newUserInfo: <%= user.dtoClass%>): Promise<<%= user.dtoClass%>> {
+            const userFind: <%= user.dtoClass%> = await this.userService.findByFields({ where: { login: userLogin } });
+            if (!userFind) {
+            throw new HttpException('Invalid login name!', HttpStatus.BAD_REQUEST);
+            }
+
+            const userFindEmail: <%= user.dtoClass%> = await this.userService.findByFields({ where: { email: newUserInfo.email } });
+            if (userFindEmail && newUserInfo.email !== userFind.email) {
+            throw new HttpException('Email is already in use!', HttpStatus.BAD_REQUEST);
+            }
+
+            userFind.firstName = newUserInfo.firstName;
+            userFind.lastName = newUserInfo.lastName;
+            userFind.email = newUserInfo.email;
+            userFind.langKey = newUserInfo.langKey;
+            await this.userService.save(userFind, userLogin);
+            return userFind;
+            }
+
+            async getAllUsers(options: FindManyOptions<User>): Promise<[<%= user.dtoClass%>[], number]> {
+                return await this.userService.findAndCount(options);
+                }
+
+
+                    <%_ } _%>
+                    }

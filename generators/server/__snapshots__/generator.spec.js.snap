@@ -128,9 +128,6 @@ exports[`SubGenerator server of nodejs JHipster blueprint > run > should succeed
   "server/src/config/application.yml": {
     "stateCleared": "modified",
   },
-  "server/src/domain/authority.entity.ts": {
-    "stateCleared": "modified",
-  },
   "server/src/domain/base/base.entity.ts": {
     "stateCleared": "modified",
   },

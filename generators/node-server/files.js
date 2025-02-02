@@ -25,7 +25,6 @@ export const serverFiles = {
         'src/domain/base/pagination.entity.spec.ts',
         'src/domain/base/base.entity.ts',
         'src/domain/user.entity.ts',
-        'src/domain/authority.entity.ts',
         'src/security/guards/roles.guard.ts',
         'src/security/guards/auth.guard.ts',
         'src/security/role-type.ts',
