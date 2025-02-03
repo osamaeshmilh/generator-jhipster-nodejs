@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNumber, IsEnum, IsDate, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
-<%_
+ <%_
 const uniqueEnums = {};
 const fieldsWithoutId = [];
 
@@ -21,128 +21,33 @@ _%>
     import { <%= enumClass %> } from '../../domain/enumeration/<%= uniqueEnums[enumClass] %>';
 <%_ }); _%>
 
-export class StringFilter {
-@ApiProperty({ required: false })
-@IsOptional()
-equals?: string;
-
-@ApiProperty({ required: false })
-@IsOptional()
-contains?: string;
-
-@ApiProperty({ required: false })
-@IsOptional()
-in?: string[];
-
-@ApiProperty({ required: false })
-@IsOptional()
-notIn?: string[];
-}
-
-export class NumberFilter {
-@ApiProperty({ required: false })
-@IsOptional()
-equals?: number;
-
-@ApiProperty({ required: false })
-@IsOptional()
-greaterThan?: number;
-
-@ApiProperty({ required: false })
-@IsOptional()
-lessThan?: number;
-
-@ApiProperty({ required: false })
-@IsOptional()
-greaterThanOrEqual?: number;
-
-@ApiProperty({ required: false })
-@IsOptional()
-lessThanOrEqual?: number;
-
-@ApiProperty({ required: false })
-@IsOptional()
-in?: number[];
-
-@ApiProperty({ required: false })
-@IsOptional()
-notIn?: number[];
-}
-
-export class DateFilter {
-@ApiProperty({ required: false })
-@IsOptional()
-equals?: Date;
-
-@ApiProperty({ required: false })
-@IsOptional()
-before?: Date;
-
-@ApiProperty({ required: false })
-@IsOptional()
-after?: Date;
-
-@ApiProperty({ required: false })
-@IsOptional()
-between?: [Date, Date];
-}
-
-export class BooleanFilter {
-@ApiProperty({ required: false })
-@IsOptional()
-equals?: boolean;
+export enum FilterOperator {
+AND = 'AND',
+OR = 'OR'
 }
 
 export class <%= entityClass %>Filter {
-// ID Filter
-@ApiProperty({ required: false, description: 'Filter by exact ID match' })
+@ApiProperty({ required: false, enum: FilterOperator, default: FilterOperator.AND })
+@IsOptional()
+@IsEnum(FilterOperator)
+operator?: FilterOperator = FilterOperator.AND;
+
+@ApiProperty({ required: false })
 @IsOptional()
 @IsString()
 id?: string;
 
-@ApiProperty({ required: false, description: 'Filter IDs greater than value' })
-@IsOptional()
-@IsNumber()
-idGt?: number;
-
-@ApiProperty({ required: false, description: 'Filter IDs less than value' })
-@IsOptional()
-@IsNumber()
-idLt?: number;
-
 <%_ for (const field of fieldsWithoutId) {
     const fieldName = field.fieldName;
-    const camelName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
 
-if (field.fieldType === 'number' || field.fieldType === 'integer' || field.fieldType === 'float') {
-_%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %> match' })
+if (field.fieldType === 'number' || field.fieldType === 'integer' || field.fieldType === 'float') { _%>
+    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
     @IsOptional()
     @IsNumber()
     <%= fieldName %>?: number;
 
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> greater than value' })
-    @IsOptional()
-    @IsNumber()
-    <%= fieldName %>Gt?: number;
-
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> less than value' })
-    @IsOptional()
-    @IsNumber()
-    <%= fieldName %>Lt?: number;
-
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> greater than or equal to value' })
-    @IsOptional()
-    @IsNumber()
-    <%= fieldName %>Gte?: number;
-
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> less than or equal to value' })
-    @IsOptional()
-    @IsNumber()
-    <%= fieldName %>Lte?: number;
-
-<%_ } else if (field.fieldType === 'date' || field.fieldType === 'timestamp') { _%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %> match' })
+<%_ } else if (field.fieldTypeLocalDate) { _%>
+    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
     @IsOptional()
     @Type(() => Date)
     @IsDate()
@@ -161,7 +66,7 @@ _%>
     <%= fieldName %>Before?: Date;
 
 <%_ } else if (field.fieldIsEnum) { _%>
-    @ApiProperty({ required: false, enum: <%= field.fieldType %>, description: 'Filter by <%= fieldName %> equals value' })
+    @ApiProperty({ required: false, enum: <%= field.fieldType %>, description: 'Filter by <%= fieldName %>' })
     @IsOptional()
     @IsEnum(<%= field.fieldType %>)
     <%= fieldName %>?: <%= field.fieldType %>;
@@ -171,64 +76,64 @@ _%>
     @IsEnum(<%= field.fieldType %>, { each: true })
     <%= fieldName %>In?: <%= field.fieldType %>[];
 
-<%_ } else if (field.fieldType === 'boolean') { _%>
-    @ApiProperty({ required: false, description: 'Filter by <%= fieldName %> value' })
+<%_ } else if (field.fieldTypeBoolean) { _%>
+    @ApiProperty({ required: false, description: 'Filter by <%= fieldName %>' })
     @IsOptional()
     @IsBoolean()
     <%= fieldName %>?: boolean;
 
+<%_ } else if (field.fieldType === 'object') { _%>
+    @ApiProperty({ required: false, description: 'Generic object filter for <%= fieldName %>' })
+    @IsOptional()
+    <%= fieldName %>?: any;
+
 <%_ } else { _%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %> match' })
+    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
     @IsOptional()
     @IsString()
     <%= fieldName %>?: string;
 
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> contains value' })
+    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> contains' })
     @IsOptional()
     @IsString()
     <%= fieldName %>Contains?: string;
-
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> in values' })
-    @IsOptional()
-    @IsString({ each: true })
-    <%= fieldName %>In?: string[];
 
 <%_ }
 } _%>
 
 static apply(query: any): any {
-const filter: any = {};
+if (!query) return {};
 
-for (const [key, value] of Object.entries(query)) {
+const { operator, ...filters } = query;
+const filterOperator = operator || FilterOperator.AND;
+const conditions = [];
+
+for (const [key, value] of Object.entries(filters)) {
 if (!value) continue;
 
-const baseField = key.replace(/Gt|Lt|Gte|Lte|Contains|In|After|Before/g, '');
-
-if (!filter[baseField]) {
-filter[baseField] = {};
-}
+const baseField = key.replace(/Contains|In|After|Before/g, '');
+let condition = {};
 
 if (key.endsWith('Contains')) {
-filter[baseField].$like = `%${value}%`;
+condition[baseField] = { $like: `%${value}%` };
 } else if (key.endsWith('In')) {
-filter[baseField].$in = value;
-} else if (key.endsWith('Gt')) {
-filter[baseField].$gt = value;
-} else if (key.endsWith('Lt')) {
-filter[baseField].$lt = value;
-} else if (key.endsWith('Gte')) {
-filter[baseField].$gte = value;
-} else if (key.endsWith('Lte')) {
-filter[baseField].$lte = value;
+condition[baseField] = { $in: value };
 } else if (key.endsWith('After')) {
-filter[baseField].$gt = value;
+condition[baseField] = { $gt: value };
 } else if (key.endsWith('Before')) {
-filter[baseField].$lt = value;
+condition[baseField] = { $lt: value };
 } else {
-filter[baseField] = value;
-}
+condition[baseField] = value;
 }
 
-return filter;
+conditions.push(condition);
+}
+
+if (conditions.length === 0) return {};
+if (conditions.length === 1) return conditions[0];
+
+return filterOperator === FilterOperator.AND
+? { $and: conditions }
+: { $or: conditions };
 }
 }
