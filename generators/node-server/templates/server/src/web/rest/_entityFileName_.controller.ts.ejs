@@ -124,4 +124,20 @@ return results;
     HeaderUtil.addEntityDeletedHeaders(req.res, '<%= entityClass %>', id);
     return await this.<%= entityInstance %>Service.deleteById(id);
   }
+
+    @Get('/records/count')
+    @Roles(RoleType.USER)
+    @ApiResponse({
+    status: 200,
+    description: 'Count records by filter'
+    })
+    async count(@Query() filter: <%= entityClass %>Filter): Promise<number> {
+        const options: FindManyOptions<<%= entityClass %>> = {};
+
+        if (filter && Object.keys(filter).length > 0) {
+        options.where = <%= entityClass %>Filter.apply(filter);
+        }
+
+        return await this.<%= entityInstance %>Service.count(options);
+        }
 }
