@@ -1,6 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import { Type, Expose as JsonProperty } from 'class-transformer';
 import { ParsedQs } from 'qs';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class Sort {
 public property: string;
@@ -22,10 +23,13 @@ return order;
 export type ExpressQueryValue = string | ParsedQs | (string | ParsedQs)[];
 
 export class PageRequest {
+@ApiProperty({ required: false, type: Number, description: 'Default page is 0' })
 @JsonProperty()
 page = 0;
+@ApiProperty({ required: false, type: Number, description: 'Default size is 20' })
 @JsonProperty()
 size = 20;
+@ApiProperty({ required: false, type: String, description: 'Example: id,ASC' })
 @Type(() => Sort)
 sort: Sort = new Sort('id,ASC');
 

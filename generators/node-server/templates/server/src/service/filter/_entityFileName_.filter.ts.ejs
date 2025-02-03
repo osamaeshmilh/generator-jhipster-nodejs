@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, IsEnum, IsDate, IsBoolean } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsNumber, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ILike, Like, In, LessThan, MoreThan, FindOperator } from 'typeorm';
 
  <%_
 const uniqueEnums = {};
@@ -41,63 +42,56 @@ id?: string;
     const fieldName = field.fieldName;
 
 if (field.fieldType === 'number' || field.fieldType === 'integer' || field.fieldType === 'float') { _%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @IsNumber()
     <%= fieldName %>?: number;
 
 <%_ } else if (field.fieldTypeLocalDate) { _%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @Type(() => Date)
     @IsDate()
     <%= fieldName %>?: Date;
 
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> after date' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @Type(() => Date)
     @IsDate()
     <%= fieldName %>After?: Date;
 
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> before date' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @Type(() => Date)
     @IsDate()
     <%= fieldName %>Before?: Date;
 
 <%_ } else if (field.fieldIsEnum) { _%>
-    @ApiProperty({ required: false, enum: <%= field.fieldType %>, description: 'Filter by <%= fieldName %>' })
+    @ApiProperty({ required: false, enum: <%= field.fieldType %> })
     @IsOptional()
     @IsEnum(<%= field.fieldType %>)
     <%= fieldName %>?: <%= field.fieldType %>;
 
-    @ApiProperty({ required: false, isArray: true, enum: <%= field.fieldType %>, description: 'Filter <%= fieldName %> in values' })
+    @ApiProperty({ required: false, isArray: true, enum: <%= field.fieldType %> })
     @IsOptional()
     @IsEnum(<%= field.fieldType %>, { each: true })
     <%= fieldName %>In?: <%= field.fieldType %>[];
 
 <%_ } else if (field.fieldTypeBoolean) { _%>
-    @ApiProperty({ required: false, description: 'Filter by <%= fieldName %>' })
+    @ApiProperty({ required: false })
     @IsOptional()
-    @IsBoolean()
     <%= fieldName %>?: boolean;
 
-<%_ } else if (field.fieldType === 'object') { _%>
-    @ApiProperty({ required: false, description: 'Generic object filter for <%= fieldName %>' })
-    @IsOptional()
-    <%= fieldName %>?: any;
-
 <%_ } else { _%>
-    @ApiProperty({ required: false, description: 'Filter by exact <%= fieldName %>' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
     <%= fieldName %>?: string;
 
-    @ApiProperty({ required: false, description: 'Filter <%= fieldName %> contains' })
+    @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
     <%= fieldName %>Contains?: string;
-
 <%_ }
 } _%>
 
@@ -105,34 +99,34 @@ static apply(query: any): any {
 if (!query) return {};
 
 const { operator, ...filters } = query;
-const filterOperator = operator || FilterOperator.AND;
 const conditions = [];
 
 for (const [key, value] of Object.entries(filters)) {
 if (!value) continue;
 
-const baseField = key.replace(/Contains|In|After|Before/g, '');
+const field = key.replace(/(Contains|In|After|Before)$/, '');
 let condition = {};
 
 if (key.endsWith('Contains')) {
-condition[baseField] = { $like: `%${value}%` };
+condition[field] = { $regex: value, $options: 'i' };
 } else if (key.endsWith('In')) {
-condition[baseField] = { $in: value };
+condition[field] = { $in: Array.isArray(value) ? value : [value] };
 } else if (key.endsWith('After')) {
-condition[baseField] = { $gt: value };
+condition[field] = { $gt: value };
 } else if (key.endsWith('Before')) {
-condition[baseField] = { $lt: value };
+condition[field] = { $lt: value };
+} else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+condition[field] = { $eq: value === 'true' };
 } else {
-condition[baseField] = value;
+condition[field] = { $eq: value };
 }
-
 conditions.push(condition);
 }
 
 if (conditions.length === 0) return {};
 if (conditions.length === 1) return conditions[0];
 
-return filterOperator === FilterOperator.AND
+return operator === FilterOperator.AND
 ? { $and: conditions }
 : { $or: conditions };
 }
