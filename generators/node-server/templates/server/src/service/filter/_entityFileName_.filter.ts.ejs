@@ -95,17 +95,19 @@ if (field.fieldType === 'number' || field.fieldType === 'integer' || field.field
 <%_ }
 } _%>
 
-static apply(query: any): any {
-if (!query) return {};
+static apply(filter: <%= entityClass %>Filter): any {
+if (!filter) return {};
 
-const { operator, ...filters } = query;
 const conditions = [];
+const allowedFields = Object.getOwnPropertyNames(<%= entityClass %>Filter.prototype)
+.concat(Object.keys(new <%= entityClass %>Filter()))
+.filter(key => key !== 'operator' && key !== 'constructor');
 
-for (const [key, value] of Object.entries(filters)) {
-if (!value) continue;
+for (const [key, value] of Object.entries(filter)) {
+if (!value || !allowedFields.includes(key.replace('Contains', ''))) continue;
 
 const field = key.replace(/(Contains|In|After|Before)$/, '');
-let condition = {};
+const condition = {};
 
 if (key.endsWith('Contains')) {
 condition[field] = { $regex: value, $options: 'i' };
@@ -126,8 +128,6 @@ conditions.push(condition);
 if (conditions.length === 0) return {};
 if (conditions.length === 1) return conditions[0];
 
-return operator === FilterOperator.AND
-? { $and: conditions }
-: { $or: conditions };
+return filter.operator === FilterOperator.AND ? { $and: conditions } : { $or: conditions };
 }
 }

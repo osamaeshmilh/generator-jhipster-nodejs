@@ -96,7 +96,7 @@ async deleteById(id: string): Promise<void | undefined> {
     <%_ } _%>
     return;
     }
-    async count(options?: FindManyOptions<Agency>): Promise<number> {
+    async count(options?: FindManyOptions<<%= entityClass %>>): Promise<number> {
             const [_, count] = await this.<%= entityInstance %>Repository.findAndCount(options);
             return count;
             }
