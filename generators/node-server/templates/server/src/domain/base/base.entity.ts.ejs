@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, ObjectIdColumn, UpdateDateColumn } from 'typeorm';
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 
 export abstract class BaseEntity {
 @ObjectIdColumn({ name: '_id' })

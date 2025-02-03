@@ -16,6 +16,7 @@ export const entityFiles = {
         'src/module/_entityFileName_.module.ts',
         'src/service/_entityFileName_.service.ts',
         'src/service/dto/_entityFileName_.dto.ts',
+        'src/service/filter/_entityFileName_.filter.ts',
         'src/service/mapper/_entityFileName_.mapper.ts',
         'src/web/rest/_entityFileName_.controller.ts',
         'e2e/_entityFileName_.e2e-spec.ts',

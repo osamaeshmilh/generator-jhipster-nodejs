@@ -5,7 +5,7 @@ import { <%= entityClass %> } from '../domain/<%= entityFileName %>.entity';
 import { <%= dtoClass %> } from '../service/dto/<%= entityFileName %>.dto';
 import { <%= entityClass %>Mapper } from '../service/mapper/<%= entityFileName %>.mapper';
 <%_ if (databaseTypeMongodb) { _%>
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 <%_ } _%>
 
 <%_

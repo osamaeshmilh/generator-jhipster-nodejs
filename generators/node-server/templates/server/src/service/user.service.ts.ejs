@@ -5,7 +5,7 @@ import { <%= user.persistClass %> } from '../domain/user.entity';
 import { transformPassword } from '../security';
 import { <%= user.dtoClass %> } from './dto/user.dto';
 import { UserMapper } from './mapper/user.mapper';
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 
 @Injectable()
 export class UserService {

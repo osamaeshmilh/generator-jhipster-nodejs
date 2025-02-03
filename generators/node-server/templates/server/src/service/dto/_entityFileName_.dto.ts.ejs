@@ -5,7 +5,7 @@ import { IsNotEmpty, MinLength, MaxLength, Length, Min, Max, Matches } from 'cla
 <%_ } _%>
 <%_ if (databaseTypeMongodb) { _%>
 import { Transform } from 'class-transformer';
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 <%_ } _%>
 import { BaseDTO } from './base.dto';
 

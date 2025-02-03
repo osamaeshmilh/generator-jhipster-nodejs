@@ -1,12 +1,17 @@
-import { Body, ClassSerializerInterceptor, Controller, Delete, Get, Logger, Param, Post as PostMethod, Put, UseGuards, Req, UseInterceptors } from '@nestjs/common';
-import { <% if (authenticationType === 'jwt') { _%> ApiBearerAuth, <% } else if (authenticationType === 'oauth2') { _%> ApiSecurity, <% } _%> ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
+import { Body, ClassSerializerInterceptor, Controller, Delete, Get, Logger, Param, Post as PostMethod,
+Put, UseGuards, Req, UseInterceptors, Query } from '@nestjs/common';
+import { <% if (authenticationType === 'jwt') { _%> ApiBearerAuth, <% } else if (authenticationType === 'oauth2') { _%> ApiSecurity, <% } _%>
+ApiTags, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { <%= dtoClass %> } from '../../service/dto/<%= entityFileName %>.dto';
+import { <%= entityClass %>Filter } from '../../service/filter/<%= entityFileName %>.filter';
 import { <%= entityClass %>Service } from '../../service/<%= entityFileName %>.service';
 import { PageRequest, Page } from '../../domain/base/pagination.entity';
-import { AuthGuard,  Roles, RolesGuard, RoleType } from '../../security';
+import { AuthGuard, Roles, RolesGuard, RoleType } from '../../security';
 import { HeaderUtil } from '../../client/header-util';
 import { Request } from '../../client/request';
 import { LoggingInterceptor } from '../../client/interceptors/logging.interceptor';
+import { FindManyOptions } from 'typeorm';
+import { <%= entityClass %> } from '../../domain/<%= entityFileName %>.entity';
 
 <%_
 const pkType = primaryKey.tsType;
@@ -27,27 +32,34 @@ export class <%= entityClass %>Controller {
   constructor(private readonly <%= entityInstance %>Service: <%= entityClass %>Service) {}
 
 
-  @Get('/')
-  @Roles(RoleType.USER)
-  @ApiResponse({
-    status: 200,
-    description: 'List all records',
-    type: <%= dtoClass %>,
-  })
-  async getAll(@Req() req: Request): Promise<<%= dtoClass %> []>  {
-    const pageRequest: PageRequest = new PageRequest(
-      req.query.page,
-      req.query.size,
-      req.query.sort
-    );
-    const [results, count] = await this.<%= entityInstance %>Service.findAndCount({
-      skip: +pageRequest.page * pageRequest.size,
-      take: +pageRequest.size,
-      order: pageRequest.sort.asOrder()
-    });
-    HeaderUtil.addPaginationHeaders(req.res, new Page(results, count, pageRequest));
-    return results;
-  }
+@Get('/')
+@Roles(RoleType.USER)
+@ApiResponse({
+status: 200,
+description: 'List all records',
+type: <%= dtoClass %>,
+})
+async getAll(@Req() req: Request, @Query() filter: <%= entityClass %>Filter): Promise<<%= dtoClass %> []>  {
+const pageRequest: PageRequest = new PageRequest(
+req.query.page,
+req.query.size,
+req.query.sort
+);
+
+const options: FindManyOptions<<%= entityClass %>> = {
+skip: +pageRequest.page * pageRequest.size,
+take: +pageRequest.size,
+order: pageRequest.sort.asOrder()
+};
+
+if (filter && Object.keys(filter).length > 0) {
+options.where = <%= entityClass %>Filter.apply(filter);
+}
+
+const [results, count] = await this.<%= entityInstance %>Service.findAndCount(options);
+HeaderUtil.addPaginationHeaders(req.res, new Page(results, count, pageRequest));
+return results;
+}
 
   @Get('/:id')
   @Roles(RoleType.USER)

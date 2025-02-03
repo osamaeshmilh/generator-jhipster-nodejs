@@ -1,7 +1,7 @@
 import { <%= persistClass %> } from '../../domain/<%= entityFileName %>.entity';
 import { <%= dtoClass %> } from '../dto/<%= entityFileName %>.dto';
 <%_ if (databaseTypeMongodb) { _%>
-import { ObjectId } from 'mongodb';
+import { ObjectId } from 'bson';
 <%_ } _%>
 
 <%_
