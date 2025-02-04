@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsEnum, IsOptional, IsString, IsNumber, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ILike, Like, In, LessThan, MoreThan, FindOperator } from 'typeorm';
+import { ObjectId } from 'bson';
 
  <%_
 const uniqueEnums = {};
@@ -95,6 +96,18 @@ if (field.fieldType === 'number' || field.fieldType === 'integer' || field.field
 <%_ }
 } _%>
 
+<%_
+// Process relationships to add filter fields for them
+        for (const relationship of relationships) {
+if (databaseTypeMongodb) {
+_%>
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    <%= relationship.propertyName %>Id?: string;
+<%_ }
+} _%>
+
 static apply(filter: <%= entityClass %>Filter): any {
 if (!filter) return {};
 
@@ -111,6 +124,9 @@ const condition = {};
 
 if (key.endsWith('Contains')) {
 condition[field] = { $regex: value, $options: 'i' };
+} else if (key.endsWith('Id')) {
+const relationField = field.replace('Id', '');
+condition[`${relationField}.id`] = new ObjectId(value);
 } else if (key.endsWith('In')) {
 condition[field] = { $in: Array.isArray(value) ? value : [value] };
 } else if (key.endsWith('After')) {
