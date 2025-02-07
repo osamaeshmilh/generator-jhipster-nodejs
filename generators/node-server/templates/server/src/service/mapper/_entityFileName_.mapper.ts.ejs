@@ -39,6 +39,10 @@ _%>
 }
 }
 _%>
+entity.createdBy = entityDTO.createdBy;
+entity.createdDate = entityDTO.createdDate;
+entity.lastModifiedBy = entityDTO.lastModifiedBy;
+entity.lastModifiedDate = entityDTO.lastModifiedDate;
 
 <%_ if (databaseTypeMongodb) { _%>
 <%_ for (idx in relationships) {
@@ -107,6 +111,10 @@ _%>
 <%_
 }
 } _%>
+entityDTO.createdBy = entity.createdBy;
+entityDTO.createdDate = entity.createdDate;
+entityDTO.lastModifiedBy = entity.lastModifiedBy;
+entityDTO.lastModifiedDate = entity.lastModifiedDate;
 
 <%_ if (databaseTypeMongodb) { _%>
 <%_ for (idx in relationships) {
