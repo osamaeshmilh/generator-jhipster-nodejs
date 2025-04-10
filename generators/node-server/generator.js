@@ -53,7 +53,7 @@ const databaseDrivers = {
 };
 
 const databaseDevDrivers = {
-  mongodb: 'mongodb-memory-server',
+  mongodb: 'mongodb',
   mysql: 'sqlite3',
   postgresql: 'sqlite3',
   oracle: 'sqlite3',

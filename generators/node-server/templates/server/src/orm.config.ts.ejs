@@ -1,7 +1,5 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-<%_ if (databaseType === 'mongodb') { _%>
-import { MongoMemoryServer } from 'mongodb-memory-server';
-<%_ } _%>
+
 import { SeedUsersRoles1570200490072 } from './migrations/1570200490072-SeedUsersRoles';
 import { CreateTables1570200270081 } from './migrations/1570200270081-CreateTables';
 // jhipster-needle-add-entity-to-ormconfig-imports - JHipster will add code here, do not remove
@@ -9,9 +7,6 @@ import { CreateTables1570200270081 } from './migrations/1570200270081-CreateTabl
 <%_ if (databaseType === 'mongodb') { _%>
     async function ormConfig(): Promise<TypeOrmModuleOptions> {
     let mongod;
-    if (process.env.BACKEND_ENV !== 'prod') {
-    mongod = await MongoMemoryServer.create();
-    }
 
     const baseConfig: TypeOrmModuleOptions = {
     name: 'default',
